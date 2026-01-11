@@ -199,7 +199,7 @@ function App() {
         <Toaster position="top-center" />
         <button onClick={() => setSelectedCourse(null)} style={{ marginBottom: "20px", cursor: "pointer" }}>← Back to Dashboard</button>
         
-        <div style={{background: "white", padding: "20px", borderRadius: "10px", border: "1px solid #eee"}}>
+        <div style={{background: "white", padding: "20px", borderRadius: "10px", border: "1px solid #2880d8"}}>
             <h1>{selectedCourse.title}</h1>
             <p style={{color: "#555"}}>{selectedCourse.description}</p>
         </div>
