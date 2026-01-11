@@ -238,17 +238,21 @@ function App() {
       <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "40px" }}>
         <h1>🎓 My LMS School</h1>
         <div>
-            <button 
-                onClick={() => setShowCreateForm(!showCreateForm)} 
-                style={{ padding: "8px 16px", backgroundColor: "#6f42c1", color: "white", border: "none", cursor: "pointer", marginRight: "10px", borderRadius: "4px" }}
-            >
-                {showCreateForm ? "Cancel" : "+ Create Course"}
-            </button>
+            {/* NEW: Teacher Button (Hidden for Students) */}
+            {userRole === 'TUTOR' && (
+                <button 
+                    onClick={() => setShowCreateForm(!showCreateForm)} 
+                    style={{ padding: "8px 16px", backgroundColor: "#6f42c1", color: "white", border: "none", cursor: "pointer", marginRight: "10px", borderRadius: "4px" }}
+                >
+                    {showCreateForm ? "Cancel" : "+ Create Course"}
+                </button>
+            )}
             <button onClick={() => setToken("")} style={{ padding: "8px 16px", backgroundColor: "#dc3545", color: "white", border: "none", cursor: "pointer", borderRadius: "4px" }}>Logout</button>
         </div>
       </div>
 
-      {showCreateForm && (
+      {/* Only show if requested AND user is a Tutor */}
+      {showCreateForm && userRole === 'TUTOR' && (
         <div style={{ background: "#f8f9fa", padding: "20px", borderRadius: "10px", marginBottom: "30px", border: "1px solid #ddd" }}>
             <h3>👨‍🏫 Teacher Dashboard: Create New Course</h3>
             <form onSubmit={handleCreateCourse} style={{ display: "flex", gap: "10px", flexWrap: "wrap" }}>
