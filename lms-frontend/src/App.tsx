@@ -9,7 +9,7 @@ interface Course { id: string; title: string; description: string; price: number
 
 function App() {
   const [courses, setCourses] = useState<Course[]>([]);
-  const [name, setName] = useState("");      // <--- NEW: For Registration
+  const [fullName, setFullName] = useState("");      // <--- NEW: For Registration
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [token, setToken] = useState("");
@@ -64,7 +64,7 @@ function App() {
         const response = await fetch(`${API_URL}/auth/register`, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ email, password, name }) // Sending Name too!
+            body: JSON.stringify({ email, password, fullName }) // Sending Name too!
         });
 
         if (response.ok) {
@@ -113,7 +113,7 @@ function App() {
           
           {/* Show Name field ONLY if registering */}
           {isRegistering && (
-              <input type="text" placeholder="Full Name" value={name} onChange={e => setName(e.target.value)} required style={{ padding: "10px" }} />
+              <input type="text" placeholder="Full Name" value={fullName} onChange={e => setFullName(e.target.value)} required style={{ padding: "10px" }} />
           )}
 
           <input type="email" placeholder="Email" value={email} onChange={e => setEmail(e.target.value)} required style={{ padding: "10px" }} />

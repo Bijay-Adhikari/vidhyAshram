@@ -24,8 +24,8 @@ model User {
   id            String   @id @default(uuid())
   email         String   @unique
   passwordHash  String
-  fullName      String
-  role          Role
+  fullName      String?
+  role          Role     @default("student")
   
   // Security
   currentSessionId String? 
