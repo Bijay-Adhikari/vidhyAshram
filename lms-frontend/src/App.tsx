@@ -2,7 +2,7 @@ import { useEffect, useState } from 'react';
 import toast, { Toaster } from 'react-hot-toast'; // <--- The new Toast Library
 
 // 1. Get the API URL from the environment (or default to localhost)
-const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:3000';
+const API_URL = import.meta.env.VITE_API_URL || 'https://vidhyashram-api.onrender.com';
 
 interface Lesson { id: string; title: string; content: string; }
 interface Course { id: string; title: string; description: string; price: number; lessons?: Lesson[]; }
