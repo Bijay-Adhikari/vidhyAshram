@@ -1,0 +1,131 @@
+// schema.prisma
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+// ------------------------------------------
+// 1. USER MANAGEMENT
+// ------------------------------------------
+
+enum Role {
+  ADMIN      // The highest power (Principal/IT)
+  TUTOR      // Teachers
+  STUDENT
+  PARENT
+}
+
+model User {
+  id            String   @id @default(uuid())
+  email         String   @unique
+  passwordHash  String
+  fullName      String
+  role          Role
+  
+  // Security
+  currentSessionId String? 
+  
+  // Profile
+  phone         String?
+  avatarUrl     String?
+
+  // RELATIONSHIPS
+  
+  // A Tutor can own many courses
+  courses       Course[]
+
+  // A Student can have many enrollments
+  enrollments   Enrollment[]
+  
+  // (Future: Parent/Child relations - keeping simple for now)
+  // children      User[]  @relation("ParentChild")
+  // parents       User[]  @relation("ParentChild")
+
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+}
+
+// ------------------------------------------
+// 2. ACADEMIC STRUCTURE (Courses)
+// ------------------------------------------
+
+model Course {
+  id          String   @id @default(uuid())
+  title       String
+  description String?
+  price       Float    @default(0.0)
+  
+  // We can add "Cover Image" here later
+  // coverImage  String?
+
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  // Relationship: A Course belongs to a Tutor (User)
+  tutorId     String
+  tutor       User     @relation(fields: [tutorId], references: [id])
+  
+  // A Course has many Students (via Enrollment)
+  enrollments Enrollment[]
+  lessons     Lesson[]
+}
+
+// ------------------------------------------
+// 3. ENROLLMENT (The Middleman)
+// ------------------------------------------
+
+model Enrollment {
+  id        String   @id @default(uuid())
+  createdAt DateTime @default(now())
+
+  // The Student
+  studentId String
+  student   User     @relation(fields: [studentId], references: [id])
+
+  // The Course
+  courseId  String
+  course    Course   @relation(fields: [courseId], references: [id])
+
+  @@unique([studentId, courseId]) // Prevents enrolling in the same course twice!
+}
+
+
+// ------------------------------------------
+// FUTURE FEATURES (Commented out for safety)
+// We will enable these one by one later!
+// ------------------------------------------
+
+// model ClassSession {
+//   id             String   @id @default(uuid())
+//   title          String   
+//   courseId       String
+//   course         Course   @relation(fields: [courseId], references: [id])
+//   startTime      DateTime
+//   endTime        DateTime
+//   zoomMeetingId  String?
+//   recordingUrl   String?
+// }
+
+// model Quiz {
+//   id          String   @id @default(uuid())
+//   title       String
+//   courseId    String
+//   course      Course   @relation(fields: [courseId], references: [id])
+//   questions   Json     
+// }
+
+model Lesson {
+  id        String   @id @default(uuid())
+  title     String
+  content   String   // This could be text, or a YouTube Link
+
+  courseId  String
+  course    Course   @relation(fields: [courseId], references: [id])
+
+  createdAt DateTime @default(now())
+}
