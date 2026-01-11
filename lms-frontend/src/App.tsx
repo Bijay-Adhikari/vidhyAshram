@@ -204,15 +204,17 @@ function App() {
             <p style={{color: "#555"}}>{selectedCourse.description}</p>
         </div>
 
-        {/* NEW: ADD LESSON FORM (Only visible to Tutors - simplistic check) */}
-        <div style={{ marginTop: "30px", background: "#e9ecef", padding: "20px", borderRadius: "8px" }}>
-            <h3>➕ Add New Lesson</h3>
-            <form onSubmit={handleAddLesson} style={{ display: "flex", flexDirection: "column", gap: "10px" }}>
-                <input type="text" placeholder="Lesson Title (e.g. Chapter 1)" value={lessonTitle} onChange={e => setLessonTitle(e.target.value)} required style={{ padding: "8px" }} />
-                <textarea placeholder="Lesson Content (e.g. YouTube Link or Notes)" value={lessonContent} onChange={e => setLessonContent(e.target.value)} required style={{ padding: "8px", minHeight: "80px" }} />
-                <button type="submit" style={{ alignSelf: "flex-start", backgroundColor: "#28a745", color: "white", border: "none", padding: "8px 20px", cursor: "pointer", borderRadius: "4px" }}>Upload Lesson</button>
-            </form>
-        </div>
+       {/* NEW: ADD LESSON FORM (Only visible if userRole is TUTOR) */}
+        {userRole === 'TUTOR' && (
+            <div style={{ marginTop: "30px", background: "#e9ecef", padding: "20px", borderRadius: "8px" }}>
+                <h3>➕ Add New Lesson</h3>
+                <form onSubmit={handleAddLesson} style={{ display: "flex", flexDirection: "column", gap: "10px" }}>
+                    <input type="text" placeholder="Lesson Title" value={lessonTitle} onChange={e => setLessonTitle(e.target.value)} required style={{ padding: "8px" }} />
+                    <textarea placeholder="Lesson Content" value={lessonContent} onChange={e => setLessonContent(e.target.value)} required style={{ padding: "8px", minHeight: "80px" }} />
+                    <button type="submit" style={{ alignSelf: "flex-start", backgroundColor: "#28a745", color: "white", border: "none", padding: "8px 20px", cursor: "pointer", borderRadius: "4px" }}>Upload Lesson</button>
+                </form>
+            </div>
+        )}
 
         <hr style={{margin: "40px 0"}}/>
 
