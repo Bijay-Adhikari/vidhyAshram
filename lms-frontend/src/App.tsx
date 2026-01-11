@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react';
 import toast, { Toaster } from 'react-hot-toast';
+import { jwtDecode } from "jwt-decode"; // You might need to install this: npm install jwt-decode
 
 const API_URL = import.meta.env.VITE_API_URL || 'https://vidhyashram-api.onrender.com';
 
@@ -8,24 +9,37 @@ interface Course { id: string; title: string; description: string; price: number
 
 function App() {
   const [courses, setCourses] = useState<Course[]>([]);
+  
   // Auth State
   const [fullName, setFullName] = useState("");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [token, setToken] = useState("");
+  const [userRole, setUserRole] = useState(""); // <--- NEW: Track if user is TUTOR or STUDENT
   const [isRegistering, setIsRegistering] = useState(false);
   
   // App State
   const [selectedCourse, setSelectedCourse] = useState<Course | null>(null);
-  const [showCreateForm, setShowCreateForm] = useState(false); // <--- NEW: Toggle for Create Form
+  const [showCreateForm, setShowCreateForm] = useState(false);
 
-  // Create Course Form State
+  // Forms State
   const [newTitle, setNewTitle] = useState("");
   const [newDesc, setNewDesc] = useState("");
   const [newPrice, setNewPrice] = useState(0);
+  
+  // NEW: Lesson Form State
+  const [lessonTitle, setLessonTitle] = useState("");
+  const [lessonContent, setLessonContent] = useState("");
 
   useEffect(() => {
-    if (token) refreshCourses();
+    if (token) {
+        refreshCourses();
+        // Decode token to find role (optional, but good for UI hiding)
+        try {
+            const decoded: any = jwtDecode(token);
+            setUserRole(decoded.role); 
+        } catch (e) { console.log("Token decode failed"); }
+    }
   }, [token]);
 
   const refreshCourses = () => {
@@ -85,7 +99,6 @@ function App() {
   const handleCreateCourse = async (e: React.FormEvent) => {
     e.preventDefault();
     const loadingToast = toast.loading("Creating Course...");
-
     try {
         const response = await fetch(`${API_URL}/courses`, {
             method: 'POST',
@@ -93,11 +106,7 @@ function App() {
                 'Content-Type': 'application/json',
                 'Authorization': `Bearer ${token}` 
             },
-            body: JSON.stringify({ 
-                title: newTitle, 
-                description: newDesc, 
-                price: Number(newPrice) 
-            })
+            body: JSON.stringify({ title: newTitle, description: newDesc, price: Number(newPrice) })
         });
 
         if (response.ok) {
@@ -113,6 +122,35 @@ function App() {
     }
   };
 
+  // NEW: Add Lesson Function
+  const handleAddLesson = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!selectedCourse) return;
+    const loadingToast = toast.loading("Uploading Lesson...");
+
+    try {
+        const response = await fetch(`${API_URL}/courses/${selectedCourse.id}/lessons`, {
+            method: 'POST',
+            headers: { 
+                'Content-Type': 'application/json',
+                'Authorization': `Bearer ${token}` 
+            },
+            body: JSON.stringify({ title: lessonTitle, content: lessonContent })
+        });
+
+        if (response.ok) {
+            toast.success("Lesson Added!", { id: loadingToast });
+            // Refresh the current course view to show new lesson
+            handleEnterClass(selectedCourse.id);
+            setLessonTitle(""); setLessonContent("");
+        } else {
+            toast.error("Failed to add lesson.", { id: loadingToast });
+        }
+    } catch (error) {
+        toast.error("Error Uploading", { id: loadingToast });
+    }
+  };
+
   const handleEnroll = async (courseId: string) => {
     if (!token) return toast("Please login first!", { icon: '🔒' });
     const response = await fetch(`${API_URL}/courses/${courseId}/enroll`, {
@@ -120,7 +158,7 @@ function App() {
       headers: { 'Authorization': `Bearer ${token}` }
     });
     if (response.ok) toast.success("Enrolled Successfully! 🎉");
-    else toast.error("Enrollment Failed");
+    else toast.error("Enrollment Failed (Are you a student?)");
   };
 
   const handleEnterClass = async (courseId: string) => {
@@ -147,9 +185,7 @@ function App() {
           </button>
         </form>
         <p style={{ marginTop: "20px" }}>
-            {isRegistering ? "Already have an account?" : "Don't have an account?"}
-            <br />
-            <button onClick={() => setIsRegistering(!isRegistering)} style={{ background: "none", border: "none", color: "#007bff", textDecoration: "underline", cursor: "pointer", marginTop: "5px" }}>
+            <button onClick={() => setIsRegistering(!isRegistering)} style={{ background: "none", border: "none", color: "#007bff", textDecoration: "underline", cursor: "pointer" }}>
                 {isRegistering ? "Login here" : "Register here"}
             </button>
         </p>
@@ -162,15 +198,30 @@ function App() {
       <div style={{ padding: "40px", fontFamily: "sans-serif", maxWidth: "800px", margin: "0 auto" }}>
         <Toaster position="top-center" />
         <button onClick={() => setSelectedCourse(null)} style={{ marginBottom: "20px", cursor: "pointer" }}>← Back to Dashboard</button>
-        <h1>{selectedCourse.title}</h1>
-        <p>{selectedCourse.description}</p>
-        <hr />
-        <h3>📚 Lessons</h3>
+        
+        <div style={{background: "white", padding: "20px", borderRadius: "10px", border: "1px solid #eee"}}>
+            <h1>{selectedCourse.title}</h1>
+            <p style={{color: "#555"}}>{selectedCourse.description}</p>
+        </div>
+
+        {/* NEW: ADD LESSON FORM (Only visible to Tutors - simplistic check) */}
+        <div style={{ marginTop: "30px", background: "#e9ecef", padding: "20px", borderRadius: "8px" }}>
+            <h3>➕ Add New Lesson</h3>
+            <form onSubmit={handleAddLesson} style={{ display: "flex", flexDirection: "column", gap: "10px" }}>
+                <input type="text" placeholder="Lesson Title (e.g. Chapter 1)" value={lessonTitle} onChange={e => setLessonTitle(e.target.value)} required style={{ padding: "8px" }} />
+                <textarea placeholder="Lesson Content (e.g. YouTube Link or Notes)" value={lessonContent} onChange={e => setLessonContent(e.target.value)} required style={{ padding: "8px", minHeight: "80px" }} />
+                <button type="submit" style={{ alignSelf: "flex-start", backgroundColor: "#28a745", color: "white", border: "none", padding: "8px 20px", cursor: "pointer", borderRadius: "4px" }}>Upload Lesson</button>
+            </form>
+        </div>
+
+        <hr style={{margin: "40px 0"}}/>
+
+        <h3>📚 Course Content</h3>
         {selectedCourse.lessons?.length ? (
           selectedCourse.lessons.map(lesson => (
-            <div key={lesson.id} style={{ background: "#f8f9fa", padding: "15px", marginBottom: "10px", borderRadius: "8px", borderLeft: "4px solid #007bff" }}>
-              <h4>{lesson.title}</h4>
-              <p>{lesson.content}</p>
+            <div key={lesson.id} style={{ background: "#f8f9fa", padding: "15px", marginBottom: "15px", borderRadius: "8px", borderLeft: "5px solid #007bff", boxShadow: "0 2px 4px rgba(0,0,0,0.05)" }}>
+              <h4 style={{marginTop: 0}}>{lesson.title}</h4>
+              <p style={{lineHeight: "1.6"}}>{lesson.content}</p>
             </div>
           ))
         ) : <p>No lessons uploaded yet!</p>}
@@ -182,22 +233,19 @@ function App() {
     <div style={{ padding: "40px", fontFamily: "sans-serif", maxWidth: "1200px", margin: "0 auto" }}>
       <Toaster position="top-center" />
       
-      {/* HEADER SECTION */}
       <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "40px" }}>
         <h1>🎓 My LMS School</h1>
         <div>
-            {/* NEW: Teacher Button */}
             <button 
                 onClick={() => setShowCreateForm(!showCreateForm)} 
-                style={{ padding: "5px 15px", backgroundColor: "#6f42c1", color: "white", border: "none", cursor: "pointer", marginRight: "10px", borderRadius: "4px" }}
+                style={{ padding: "8px 16px", backgroundColor: "#6f42c1", color: "white", border: "none", cursor: "pointer", marginRight: "10px", borderRadius: "4px" }}
             >
                 {showCreateForm ? "Cancel" : "+ Create Course"}
             </button>
-            <button onClick={() => setToken("")} style={{ padding: "5px 10px", backgroundColor: "#dc3545", color: "white", border: "none", cursor: "pointer", borderRadius: "4px" }}>Logout</button>
+            <button onClick={() => setToken("")} style={{ padding: "8px 16px", backgroundColor: "#dc3545", color: "white", border: "none", cursor: "pointer", borderRadius: "4px" }}>Logout</button>
         </div>
       </div>
 
-      {/* NEW: CREATE COURSE FORM */}
       {showCreateForm && (
         <div style={{ background: "#f8f9fa", padding: "20px", borderRadius: "10px", marginBottom: "30px", border: "1px solid #ddd" }}>
             <h3>👨‍🏫 Teacher Dashboard: Create New Course</h3>
@@ -210,12 +258,10 @@ function App() {
         </div>
       )}
 
-      {/* COURSE LIST */}
       <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(250px, 1fr))", gap: "20px" }}>
-        {courses.length === 0 && <p>No courses available. Create one!</p>}
         {courses.map(course => (
-          <div key={course.id} style={{ border: "1px solid #ddd", padding: "20px", borderRadius: "12px", boxShadow: "0 4px 8px rgba(0,0,0,0.1)" }}>
-            <h2>{course.title}</h2>
+          <div key={course.id} style={{ border: "1px solid #eee", padding: "20px", borderRadius: "12px", boxShadow: "0 4px 12px rgba(0,0,0,0.05)" }}>
+            <h2 style={{marginTop: 0}}>{course.title}</h2>
             <p style={{ color: "#666" }}>{course.description}</p>
             <div style={{ marginTop: "20px", display: "flex", gap: "10px" }}>
               <button onClick={() => handleEnroll(course.id)} style={{ flex: 1, backgroundColor: "#28a745", color: "white", border: "none", padding: "10px", borderRadius: "6px", cursor: "pointer" }}>Enroll (${course.price})</button>
