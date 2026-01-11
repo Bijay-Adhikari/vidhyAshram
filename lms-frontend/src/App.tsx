@@ -206,7 +206,7 @@ function App() {
 
        {/* NEW: ADD LESSON FORM (Only visible if userRole is TUTOR) */}
         {userRole === 'TUTOR' && (
-            <div style={{ marginTop: "30px", background: "#e9ecef", padding: "20px", borderRadius: "8px" }}>
+            <div style={{ marginTop: "30px", background: "#2880d8", padding: "20px", borderRadius: "8px" }}>
                 <h3>➕ Add New Lesson</h3>
                 <form onSubmit={handleAddLesson} style={{ display: "flex", flexDirection: "column", gap: "10px" }}>
                     <input type="text" placeholder="Lesson Title" value={lessonTitle} onChange={e => setLessonTitle(e.target.value)} required style={{ padding: "8px" }} />
