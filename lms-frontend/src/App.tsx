@@ -162,9 +162,20 @@ function App() {
   };
 
   const handleEnterClass = async (courseId: string) => {
-    const response = await fetch(`${API_URL}/courses/${courseId}`);
-    const data = await response.json();
-    setSelectedCourse(data);
+    // We now send the TOKEN so the backend knows who we are
+    const response = await fetch(`${API_URL}/courses/${courseId}`, {
+      method: 'GET',
+      headers: { 
+        'Authorization': `Bearer ${token}` 
+      }
+    });
+
+    if (response.ok) {
+      const data = await response.json();
+      setSelectedCourse(data);
+    } else {
+      toast.error("Could not load class. Please login.");
+    }
   };
 
   // --- VIEWS ---
