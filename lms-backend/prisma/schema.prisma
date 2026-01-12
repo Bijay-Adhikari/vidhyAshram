@@ -59,6 +59,7 @@ model Course {
   title       String
   description String?
   price       Float    @default(0.0)
+  zoomLink    String?
   
   // We can add "Cover Image" here later
   // coverImage  String?
@@ -90,6 +91,9 @@ model Enrollment {
   // The Course
   courseId  String
   course    Course   @relation(fields: [courseId], references: [id])
+  // NEW: How did they get here? 
+  // Values can be: 'WEBSITE' (Student clicked enroll) or 'ADMIN' (You added them)
+  method    String   @default("WEBSITE")
 
   @@unique([studentId, courseId]) // Prevents enrolling in the same course twice!
 }
