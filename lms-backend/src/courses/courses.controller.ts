@@ -30,6 +30,23 @@ export class CoursesController {
     return this.coursesService.findAll();
   }
 
+  // 3. View ONE Course (Protected - Checks Enrollment)
+  // FIXED: We use AuthGuard('jwt') here to match your other methods.
+  @UseGuards(AuthGuard('jwt')) 
+  @Get(':id')
+  async findOne(@Param('id') id: string, @Request() req) {
+    // We pass the whole user object because we need both ID and Role
+    return this.coursesService.findOne(id, req.user);
+  }
+
+  // 4. Enroll in a Course (Students Only)
+  @UseGuards(AuthGuard('jwt'), RolesGuard)
+  @Roles('STUDENT')
+  @Post(':id/enroll')
+  enroll(@Param('id') courseId: string, @Request() req) {
+    return this.coursesService.enroll(courseId, req.user.userId);
+  }
+
   // 5. View My Enrolled Courses (Student Dashboard)
   @UseGuards(AuthGuard('jwt'), RolesGuard)
   @Roles('STUDENT')
@@ -44,21 +61,6 @@ export class CoursesController {
   @Get('teacher-dashboard')
   findTutorDashboard(@Request() req) {
     return this.coursesService.findTutorCourses(req.user.userId);
-  }
-
- // 3. View One Course (Public)
-  @Get(':id')
-  findOne(@Param('id') id: string) {
-    // We switched to the new service function here!
-    return this.coursesService.getCourseWithLessons(id);
-  }
-
-  // 4. Enroll in a Course (Students Only) -> NEW FUNCTION
-  @UseGuards(AuthGuard('jwt'), RolesGuard)
-  @Roles('STUDENT')
-  @Post(':id/enroll')
-  enroll(@Param('id') courseId: string, @Request() req) {
-    return this.coursesService.enroll(courseId, req.user.userId);
   }
 
   // 7. Add a Lesson (Tutors Only)

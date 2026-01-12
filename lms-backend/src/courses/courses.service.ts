@@ -1,95 +1,107 @@
-import { Injectable } from '@nestjs/common';
+import { Injectable, NotFoundException } from '@nestjs/common'; // <--- We added NotFoundException here
 import { PrismaService } from '../prisma/prisma.service';
 
 @Injectable()
 export class CoursesService {
   constructor(private prisma: PrismaService) {}
 
-  // We accept the data AND the ID of the Tutor creating it
-  create(createCourseDto: any, tutorId: string) {
+  // 1. Create Course
+  async create(data: { title: string; description: string; price: number }, tutorId: string) {
     return this.prisma.course.create({
       data: {
-        title: createCourseDto.title,
-        description: createCourseDto.description,
-        price: createCourseDto.price,
-        tutorId: tutorId, // <--- Link the course to the logged-in Tutor
+        ...data,
+        tutorId, 
       },
     });
   }
 
-  findAll() {
-    return this.prisma.course.findMany();
+  // 2. Find All Courses
+  async findAll() {
+    return this.prisma.course.findMany({
+      include: { tutor: { select: { fullName: true } } } 
+    });
   }
 
-  findOne(id: string) {
-    return this.prisma.course.findUnique({ where: { id } });
-  }
+  // 3. Find One Course (With Security Check)
+  async findOne(id: string, user: any) {
+    const course = await this.prisma.course.findUnique({
+      where: { id },
+      include: { 
+        lessons: true, 
+        tutor: true 
+      }, 
+    });
 
-  async enroll(courseId: string, userId: string) {
-    // Check if course exists
-    const course = await this.prisma.course.findUnique({ where: { id: courseId } });
+    // If course doesn't exist, throw the error
     if (!course) {
-      throw new Error('Course not found');
+      throw new NotFoundException(`Course with ID ${id} not found`);
     }
 
-    // Create the enrollment
-    return this.prisma.enrollment.create({
-      data: {
-        courseId: courseId,
-        studentId: userId,
-      },
-    });
-  }
+    // --- SECURITY CHECKS ---
 
-  async findStudentCourses(studentId: string) {
-    return this.prisma.enrollment.findMany({
-      where: {
-        studentId: studentId, // Filter by THIS student
-      },
-      include: {
-        course: true, // Join the 'Course' table to get the title/description
-      },
-    });
-  }
+    // 1. If Teacher (Owner) -> Allow Full Access
+    // We use 'userId' because that is what your Strategy uses
+    if (user.role === 'TUTOR' && course.tutorId === user.userId) {
+      return course;
+    }
 
-  async findTutorCourses(tutorId: string) {
-    return this.prisma.course.findMany({
+    // 2. If Enrolled Student -> Allow Full Access
+    const enrollment = await this.prisma.enrollment.findUnique({
       where: {
-        tutorId: tutorId, // Only courses owned by this tutor
-      },
-      include: {
-        enrollments: {
-          include: {
-            student: {
-              // SECURITY: Only select safe fields!
-              select: {
-                fullName: true,
-                email: true,
-              },
-            },
-          },
+        studentId_courseId: {
+          studentId: user.userId, 
+          courseId: id,
         },
       },
     });
+
+    if (enrollment) {
+      return course;
+    }
+
+    // 3. Otherwise -> Lock content (Hide lessons)
+    return {
+      ...course,
+      lessons: [], // Empty array = "Locked"
+    };
   }
 
-  async addLesson(courseId: string, title: string, content: string) {
-    return this.prisma.lesson.create({
+  // 4. Enroll Student
+  async enroll(courseId: string, studentId: string) {
+    return this.prisma.enrollment.create({
       data: {
-        title: title,
-        content: content,
-        courseId: courseId,
+        courseId,
+        studentId,
       },
     });
   }
-  
-  // Use this INSTEAD of findOne if you want to see lessons
-  async getCourseWithLessons(courseId: string) {
-    return this.prisma.course.findUnique({
-      where: { id: courseId },
-      include: {
-        lessons: true, // <--- VS Code should recognize this now!
-      },
+
+  // 5. Find Student's Courses
+  async findStudentCourses(studentId: string) {
+    return this.prisma.enrollment.findMany({
+      where: { studentId },
+      include: { course: true }
+    });
+  }
+
+  // 6. Find Tutor's Courses
+  async findTutorCourses(tutorId: string) {
+    return this.prisma.course.findMany({
+      where: { tutorId },
+      include: { 
+        _count: { select: { enrollments: true } } 
+      }
+    });
+  }
+
+  // 7. Add Lesson
+  async addLesson(courseId: string, title: string, content: string) {
+    return this.prisma.lesson.create({
+      data: {
+        title,
+        content,
+        courseId
+      }
     });
   }
 }
