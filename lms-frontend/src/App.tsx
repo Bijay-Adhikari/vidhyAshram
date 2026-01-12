@@ -1,11 +1,12 @@
 import { useEffect, useState } from 'react';
 import toast, { Toaster } from 'react-hot-toast';
-import { jwtDecode } from "jwt-decode"; // You might need to install this: npm install jwt-decode
+import { jwtDecode } from "jwt-decode"; 
 
 const API_URL = import.meta.env.VITE_API_URL || 'https://vidhyashram-api.onrender.com';
 
 interface Lesson { id: string; title: string; content: string; }
-interface Course { id: string; title: string; description: string; price: number; lessons?: Lesson[]; }
+// UPDATED: Added zoomLink to the Course interface
+interface Course { id: string; title: string; description: string; price: number; zoomLink?: string; lessons?: Lesson[]; }
 
 function App() {
   const [courses, setCourses] = useState<Course[]>([]);
@@ -15,7 +16,7 @@ function App() {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [token, setToken] = useState("");
-  const [userRole, setUserRole] = useState(""); // <--- NEW: Track if user is TUTOR or STUDENT
+  const [userRole, setUserRole] = useState(""); 
   const [isRegistering, setIsRegistering] = useState(false);
   
   // App State
@@ -26,15 +27,16 @@ function App() {
   const [newTitle, setNewTitle] = useState("");
   const [newDesc, setNewDesc] = useState("");
   const [newPrice, setNewPrice] = useState(0);
+  // NEW: State for the Zoom Link
+  const [newZoomLink, setNewZoomLink] = useState("");
   
-  // NEW: Lesson Form State
+  // Lesson Form State
   const [lessonTitle, setLessonTitle] = useState("");
   const [lessonContent, setLessonContent] = useState("");
 
   useEffect(() => {
     if (token) {
         refreshCourses();
-        // Decode token to find role (optional, but good for UI hiding)
         try {
             const decoded: any = jwtDecode(token);
             setUserRole(decoded.role); 
@@ -100,20 +102,27 @@ function App() {
     e.preventDefault();
     const loadingToast = toast.loading("Creating Course...");
     try {
+        // UPDATED: Sending zoomLink to backend
         const response = await fetch(`${API_URL}/courses`, {
             method: 'POST',
             headers: { 
                 'Content-Type': 'application/json',
                 'Authorization': `Bearer ${token}` 
             },
-            body: JSON.stringify({ title: newTitle, description: newDesc, price: Number(newPrice) })
+            body: JSON.stringify({ 
+                title: newTitle, 
+                description: newDesc, 
+                price: Number(newPrice),
+                zoomLink: newZoomLink // <--- Sent here
+            })
         });
 
         if (response.ok) {
             toast.success("Course Created!", { id: loadingToast });
             setShowCreateForm(false); 
             refreshCourses(); 
-            setNewTitle(""); setNewDesc(""); setNewPrice(0);
+            // Reset form
+            setNewTitle(""); setNewDesc(""); setNewPrice(0); setNewZoomLink("");
         } else {
             toast.error("Failed. Are you a Tutor?", { id: loadingToast });
         }
@@ -122,7 +131,6 @@ function App() {
     }
   };
 
-  // NEW: Add Lesson Function
   const handleAddLesson = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!selectedCourse) return;
@@ -140,7 +148,6 @@ function App() {
 
         if (response.ok) {
             toast.success("Lesson Added!", { id: loadingToast });
-            // Refresh the current course view to show new lesson
             handleEnterClass(selectedCourse.id);
             setLessonTitle(""); setLessonContent("");
         } else {
@@ -162,7 +169,6 @@ function App() {
   };
 
   const handleEnterClass = async (courseId: string) => {
-    // We now send the TOKEN so the backend knows who we are
     const response = await fetch(`${API_URL}/courses/${courseId}`, {
       method: 'GET',
       headers: { 
@@ -213,9 +219,32 @@ function App() {
         <div style={{background: "white", padding: "20px", borderRadius: "10px", border: "1px solid #2880d8"}}>
             <h1>{selectedCourse.title}</h1>
             <p style={{color: "#555"}}>{selectedCourse.description}</p>
+            
+            {/* NEW: JOIN ZOOM BUTTON (Only shows if link exists) */}
+            {selectedCourse.zoomLink && (
+              <div style={{ marginTop: "20px", padding: "15px", backgroundColor: "#e3f2fd", borderRadius: "8px", border: "1px solid #90caf9" }}>
+                <h3 style={{ margin: "0 0 10px 0", color: "#0d47a1" }}>🎥 Live Class Available</h3>
+                <a 
+                  href={selectedCourse.zoomLink} 
+                  target="_blank" 
+                  rel="noopener noreferrer"
+                  style={{ 
+                    display: "inline-block", 
+                    padding: "10px 20px", 
+                    backgroundColor: "#2196f3", 
+                    color: "white", 
+                    textDecoration: "none", 
+                    borderRadius: "5px", 
+                    fontWeight: "bold" 
+                  }}
+                >
+                  Join Zoom Meeting
+                </a>
+              </div>
+            )}
         </div>
 
-       {/* NEW: ADD LESSON FORM (Only visible if userRole is TUTOR) */}
+       {/* ADD LESSON FORM (Only visible if userRole is TUTOR) */}
         {userRole === 'TUTOR' && (
             <div style={{ marginTop: "30px", background: "#2880d8", padding: "20px", borderRadius: "8px" }}>
                 <h3>➕ Add New Lesson</h3>
@@ -249,7 +278,7 @@ function App() {
       <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "40px" }}>
         <h1>🎓 My LMS School</h1>
         <div>
-            {/* NEW: Teacher Button (Hidden for Students) */}
+            {/* Teacher Button (Hidden for Students) */}
             {userRole === 'TUTOR' && (
                 <button 
                     onClick={() => setShowCreateForm(!showCreateForm)} 
@@ -262,14 +291,18 @@ function App() {
         </div>
       </div>
 
-      {/* Only show if requested AND user is a Tutor */}
+      {/* CREATE COURSE FORM - Updated with Zoom Link */}
       {showCreateForm && userRole === 'TUTOR' && (
         <div style={{ background: "#f8f9fa", padding: "20px", borderRadius: "10px", marginBottom: "30px", border: "1px solid #ddd" }}>
             <h3>👨‍🏫 Teacher Dashboard: Create New Course</h3>
             <form onSubmit={handleCreateCourse} style={{ display: "flex", gap: "10px", flexWrap: "wrap" }}>
-                <input type="text" placeholder="Course Title" value={newTitle} onChange={e => setNewTitle(e.target.value)} required style={{ flex: 1, padding: "8px" }} />
-                <input type="text" placeholder="Description" value={newDesc} onChange={e => setNewDesc(e.target.value)} required style={{ flex: 2, padding: "8px" }} />
+                <input type="text" placeholder="Course Title" value={newTitle} onChange={e => setNewTitle(e.target.value)} required style={{ flex: "1 1 200px", padding: "8px" }} />
+                <input type="text" placeholder="Description" value={newDesc} onChange={e => setNewDesc(e.target.value)} required style={{ flex: "2 1 300px", padding: "8px" }} />
                 <input type="number" placeholder="Price $" value={newPrice} onChange={e => setNewPrice(Number(e.target.value))} required style={{ width: "80px", padding: "8px" }} />
+                
+                {/* NEW: Zoom Link Input */}
+                <input type="text" placeholder="Zoom Link (Optional)" value={newZoomLink} onChange={e => setNewZoomLink(e.target.value)} style={{ flex: "1 1 200px", padding: "8px" }} />
+
                 <button type="submit" style={{ backgroundColor: "#28a745", color: "white", border: "none", padding: "8px 20px", cursor: "pointer", borderRadius: "4px" }}>Create</button>
             </form>
         </div>
