@@ -20,7 +20,7 @@ export class CoursesController {
   @UseGuards(AuthGuard('jwt'), RolesGuard)
   @Roles('TUTOR')
   @Post()
-  create(@Body() createCourseDto: { title: string; description: string; price: number }, @Request() req) {
+  create(@Body() createCourseDto: { title: string; description: string; price: number; zoomLink?: string }, @Request() req) {
     return this.coursesService.create(createCourseDto, req.user.userId);
   }
 

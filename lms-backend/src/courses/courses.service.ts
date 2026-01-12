@@ -5,8 +5,8 @@ import { PrismaService } from '../prisma/prisma.service';
 export class CoursesService {
   constructor(private prisma: PrismaService) {}
 
-  // 1. Create Course
-  async create(data: { title: string; description: string; price: number }, tutorId: string) {
+// 1. Create Course (Now accepts zoomLink)
+  async create(data: { title: string; description: string; price: number; zoomLink?: string }, tutorId: string) {
     return this.prisma.course.create({
       data: {
         ...data,
