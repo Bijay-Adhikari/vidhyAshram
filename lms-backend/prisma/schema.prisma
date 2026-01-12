@@ -21,33 +21,33 @@ enum Role {
 }
 
 model User {
-  id            String   @id @default(uuid())
-  email         String   @unique
-  passwordHash  String
-  fullName      String?
-  role          Role     @default(STUDENT)
+  id           String   @id @default(uuid())
+  email        String   @unique
+  // CRITICAL: We keep passwordHash to preserve your existing logins
+  passwordHash String   
+  fullName     String?
+  role         Role     @default(STUDENT)
   
   // Security
   currentSessionId String? 
   
   // Profile
-  phone         String?
-  avatarUrl     String?
+  phone          String?
+  avatarUrl      String?
 
   // RELATIONSHIPS
   
   // A Tutor can own many courses
-  courses       Course[]
+  courses        Course[]
 
   // A Student can have many enrollments
-  enrollments   Enrollment[]
+  enrollments    Enrollment[]
   
-  // (Future: Parent/Child relations - keeping simple for now)
-  // children      User[]  @relation("ParentChild")
-  // parents       User[]  @relation("ParentChild")
+  // NEW: A Student makes many submissions (homework)
+  submissions    Submission[]
 
-  createdAt     DateTime @default(now())
-  updatedAt     DateTime @updatedAt
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
 }
 
 // ------------------------------------------
@@ -61,9 +61,6 @@ model Course {
   price       Float    @default(0.0)
   zoomLink    String?
   
-  // We can add "Cover Image" here later
-  // coverImage  String?
-
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
 
@@ -71,9 +68,10 @@ model Course {
   tutorId     String
   tutor       User     @relation(fields: [tutorId], references: [id])
   
-  // A Course has many Students (via Enrollment)
+  // A Course has many Students, Lessons, AND Assignments
   enrollments Enrollment[]
   lessons     Lesson[]
+  assignments Assignment[] // <--- NEW: Link to Assignments
 }
 
 // ------------------------------------------
@@ -91,45 +89,75 @@ model Enrollment {
   // The Course
   courseId  String
   course    Course   @relation(fields: [courseId], references: [id])
-  // NEW: How did they get here? 
-  // Values can be: 'WEBSITE' (Student clicked enroll) or 'ADMIN' (You added them)
+  
   method    String   @default("WEBSITE")
 
-  @@unique([studentId, courseId]) // Prevents enrolling in the same course twice!
+  @@unique([studentId, courseId]) 
 }
 
-
 // ------------------------------------------
-// FUTURE FEATURES (Commented out for safety)
-// We will enable these one by one later!
+// 4. LESSONS & ATTACHMENTS (The Library)
 // ------------------------------------------
-
-// model ClassSession {
-//   id             String   @id @default(uuid())
-//   title          String   
-//   courseId       String
-//   course         Course   @relation(fields: [courseId], references: [id])
-//   startTime      DateTime
-//   endTime        DateTime
-//   zoomMeetingId  String?
-//   recordingUrl   String?
-// }
-
-// model Quiz {
-//   id          String   @id @default(uuid())
-//   title       String
-//   courseId    String
-//   course      Course   @relation(fields: [courseId], references: [id])
-//   questions   Json     
-// }
 
 model Lesson {
   id        String   @id @default(uuid())
   title     String
-  content   String   // This could be text, or a YouTube Link
+  content   String   // Text content (Introduction, etc.)
 
   courseId  String
   course    Course   @relation(fields: [courseId], references: [id])
 
+  // NEW: Instead of just one video link, we allow multiple files
+  attachments Attachment[]
+
   createdAt DateTime @default(now())
+}
+
+// NEW: Handles Uploads (Videos, PDFs, Images) for Lessons
+model Attachment {
+  id        String   @id @default(uuid())
+  name      String   // e.g. "Chapter 1 Slides"
+  url       String   // The Cloudinary URL
+  type      String   // "VIDEO", "PDF", "IMAGE", "LINK"
+  
+  lessonId  String
+  lesson    Lesson   @relation(fields: [lessonId], references: [id])
+}
+
+// ------------------------------------------
+// 5. ASSIGNMENTS & GRADING (The Portal)
+// ------------------------------------------
+
+// NEW: The "Task" created by the Teacher
+model Assignment {
+  id           String   @id @default(uuid())
+  title        String
+  instructions String
+  dueDate      DateTime // The deadline
+  
+  courseId     String
+  course       Course   @relation(fields: [courseId], references: [id])
+
+  submissions  Submission[]
+}
+
+// NEW: The "Work" submitted by the Student
+model Submission {
+  id           String   @id @default(uuid())
+  
+  // Student's Contribution
+  content      String?  // Optional text note
+  fileUrl      String?  // The file they uploaded (PDF/Image)
+  submittedAt  DateTime @default(now()) // We compare this vs. Assignment.dueDate
+  
+  // Teacher's Feedback (Grading Section)
+  grade        Int?     // e.g. 85. Null means "Not Graded Yet"
+  feedback     String?  // e.g. "Good effort, but check your sources."
+  gradedAt     DateTime? // When did the teacher grade it?
+
+  assignmentId String
+  assignment   Assignment @relation(fields: [assignmentId], references: [id])
+  
+  studentId    String
+  student      User     @relation(fields: [studentId], references: [id])
 }
