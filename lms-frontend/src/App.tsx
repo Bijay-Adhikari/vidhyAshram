@@ -5,7 +5,6 @@ import { jwtDecode } from "jwt-decode";
 const API_URL = import.meta.env.VITE_API_URL || 'https://vidhyashram-api.onrender.com';
 
 interface Lesson { id: string; title: string; content: string; }
-// UPDATED: Added zoomLink to the Course interface
 interface Course { id: string; title: string; description: string; price: number; zoomLink?: string; lessons?: Lesson[]; }
 
 function App() {
@@ -19,6 +18,9 @@ function App() {
   const [userRole, setUserRole] = useState(""); 
   const [isRegistering, setIsRegistering] = useState(false);
   
+  // NEW: Checkbox state for Tutor Registration
+  const [isRegisteringAsTutor, setIsRegisteringAsTutor] = useState(false); 
+  
   // App State
   const [selectedCourse, setSelectedCourse] = useState<Course | null>(null);
   const [showCreateForm, setShowCreateForm] = useState(false);
@@ -27,7 +29,6 @@ function App() {
   const [newTitle, setNewTitle] = useState("");
   const [newDesc, setNewDesc] = useState("");
   const [newPrice, setNewPrice] = useState(0);
-  // NEW: State for the Zoom Link
   const [newZoomLink, setNewZoomLink] = useState("");
   
   // Lesson Form State
@@ -79,16 +80,27 @@ function App() {
   const handleRegister = async (e: React.FormEvent) => {
     e.preventDefault();
     const loadingToast = toast.loading("Creating Account...");
+    
+    // DECIDE ROLE: If checkbox is checked, send 'TUTOR', else 'STUDENT'
+    const roleToSend = isRegisteringAsTutor ? 'TUTOR' : 'STUDENT';
+
     try {
         const response = await fetch(`${API_URL}/auth/register`, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ email, password, fullName })
+            body: JSON.stringify({ 
+                email, 
+                password, 
+                fullName,
+                role: roleToSend // <--- SENDING ROLE HERE
+            })
         });
 
         if (response.ok) {
             toast.success("Account Created! Please Login.", { id: loadingToast });
             setIsRegistering(false);
+            // Reset fields
+            setFullName(""); setEmail(""); setPassword(""); setIsRegisteringAsTutor(false);
         } else {
             const data = await response.json();
             toast.error(data.message || "Registration Failed", { id: loadingToast });
@@ -102,7 +114,6 @@ function App() {
     e.preventDefault();
     const loadingToast = toast.loading("Creating Course...");
     try {
-        // UPDATED: Sending zoomLink to backend
         const response = await fetch(`${API_URL}/courses`, {
             method: 'POST',
             headers: { 
@@ -113,7 +124,7 @@ function App() {
                 title: newTitle, 
                 description: newDesc, 
                 price: Number(newPrice),
-                zoomLink: newZoomLink // <--- Sent here
+                zoomLink: newZoomLink 
             })
         });
 
@@ -121,7 +132,6 @@ function App() {
             toast.success("Course Created!", { id: loadingToast });
             setShowCreateForm(false); 
             refreshCourses(); 
-            // Reset form
             setNewTitle(""); setNewDesc(""); setNewPrice(0); setNewZoomLink("");
         } else {
             toast.error("Failed. Are you a Tutor?", { id: loadingToast });
@@ -193,7 +203,21 @@ function App() {
         <h1>{isRegistering ? "📝 Create Account" : "🔐 Please Login"}</h1>
         <form onSubmit={isRegistering ? handleRegister : handleLogin} style={{ display: "flex", flexDirection: "column", gap: "10px" }}>
           {isRegistering && (
-              <input type="text" placeholder="Full Name" value={fullName} onChange={e => setFullName(e.target.value)} required style={{ padding: "10px" }} />
+              <>
+                <input type="text" placeholder="Full Name" value={fullName} onChange={e => setFullName(e.target.value)} required style={{ padding: "10px" }} />
+                
+                {/* NEW: TUTOR CHECKBOX */}
+                <div style={{display: "flex", alignItems: "center", gap: "10px", padding: "5px", background: "#f8f9fa", borderRadius: "5px"}}>
+                    <input 
+                        type="checkbox" 
+                        id="tutorCheck"
+                        checked={isRegisteringAsTutor} 
+                        onChange={(e) => setIsRegisteringAsTutor(e.target.checked)} 
+                        style={{width: "20px", height: "20px"}}
+                    />
+                    <label htmlFor="tutorCheck" style={{cursor: "pointer", fontWeight: "bold"}}>I am a Teacher 👨‍🏫</label>
+                </div>
+              </>
           )}
           <input type="email" placeholder="Email" value={email} onChange={e => setEmail(e.target.value)} required style={{ padding: "10px" }} />
           <input type="password" placeholder="Password" value={password} onChange={e => setPassword(e.target.value)} required style={{ padding: "10px" }} />
@@ -220,7 +244,6 @@ function App() {
             <h1>{selectedCourse.title}</h1>
             <p style={{color: "#555"}}>{selectedCourse.description}</p>
             
-            {/* NEW: JOIN ZOOM BUTTON (Only shows if link exists) */}
             {selectedCourse.zoomLink && (
               <div style={{ marginTop: "20px", padding: "15px", backgroundColor: "#e3f2fd", borderRadius: "8px", border: "1px solid #90caf9" }}>
                 <h3 style={{ margin: "0 0 10px 0", color: "#0d47a1" }}>🎥 Live Class Available</h3>
@@ -244,7 +267,6 @@ function App() {
             )}
         </div>
 
-       {/* ADD LESSON FORM (Only visible if userRole is TUTOR) */}
         {userRole === 'TUTOR' && (
             <div style={{ marginTop: "30px", background: "#2880d8", padding: "20px", borderRadius: "8px" }}>
                 <h3>➕ Add New Lesson</h3>
@@ -278,7 +300,6 @@ function App() {
       <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "40px" }}>
         <h1>🎓 My LMS School</h1>
         <div>
-            {/* Teacher Button (Hidden for Students) */}
             {userRole === 'TUTOR' && (
                 <button 
                     onClick={() => setShowCreateForm(!showCreateForm)} 
@@ -291,7 +312,6 @@ function App() {
         </div>
       </div>
 
-      {/* CREATE COURSE FORM - Updated with Zoom Link */}
       {showCreateForm && userRole === 'TUTOR' && (
         <div style={{ background: "#f8f9fa", padding: "20px", borderRadius: "10px", marginBottom: "30px", border: "1px solid #ddd" }}>
             <h3>👨‍🏫 Teacher Dashboard: Create New Course</h3>
@@ -299,10 +319,7 @@ function App() {
                 <input type="text" placeholder="Course Title" value={newTitle} onChange={e => setNewTitle(e.target.value)} required style={{ flex: "1 1 200px", padding: "8px" }} />
                 <input type="text" placeholder="Description" value={newDesc} onChange={e => setNewDesc(e.target.value)} required style={{ flex: "2 1 300px", padding: "8px" }} />
                 <input type="number" placeholder="Price $" value={newPrice} onChange={e => setNewPrice(Number(e.target.value))} required style={{ width: "80px", padding: "8px" }} />
-                
-                {/* NEW: Zoom Link Input */}
                 <input type="text" placeholder="Zoom Link (Optional)" value={newZoomLink} onChange={e => setNewZoomLink(e.target.value)} style={{ flex: "1 1 200px", padding: "8px" }} />
-
                 <button type="submit" style={{ backgroundColor: "#28a745", color: "white", border: "none", padding: "8px 20px", cursor: "pointer", borderRadius: "4px" }}>Create</button>
             </form>
         </div>
