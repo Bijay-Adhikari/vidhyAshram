@@ -283,7 +283,7 @@ function App() {
         <h3>📚 Course Content</h3>
         {selectedCourse.lessons?.length ? (
           selectedCourse.lessons.map(lesson => (
-            <div key={lesson.id} style={{ background: "#75f7f9", padding: "15px", marginBottom: "15px", borderRadius: "8px", borderLeft: "5px solid #007bff", boxShadow: "0 2px 4px rgba(0,0,0,0.05)" }}>
+            <div key={lesson.id} style={{ background: "#2880d8", padding: "15px", marginBottom: "15px", borderRadius: "8px", borderLeft: "5px solid #007bff", boxShadow: "0 2px 4px rgba(0,0,0,0.05)" }}>
               <h4 style={{marginTop: 0}}>{lesson.title}</h4>
               <p style={{lineHeight: "1.6"}}>{lesson.content}</p>
             </div>
@@ -313,7 +313,7 @@ function App() {
       </div>
 
       {showCreateForm && userRole === 'TUTOR' && (
-        <div style={{ background: "#f8f9fa", padding: "20px", borderRadius: "10px", marginBottom: "30px", border: "1px solid #ddd" }}>
+        <div style={{ background: "#72b2f3", padding: "20px", borderRadius: "10px", marginBottom: "30px", border: "1px solid #ddd" }}>
             <h3>👨‍🏫 Teacher Dashboard: Create New Course</h3>
             <form onSubmit={handleCreateCourse} style={{ display: "flex", gap: "10px", flexWrap: "wrap" }}>
                 <input type="text" placeholder="Course Title" value={newTitle} onChange={e => setNewTitle(e.target.value)} required style={{ flex: "1 1 200px", padding: "8px" }} />
