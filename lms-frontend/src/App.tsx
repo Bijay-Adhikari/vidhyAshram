@@ -245,7 +245,7 @@ function App() {
             <p style={{color: "#555"}}>{selectedCourse.description}</p>
             
             {selectedCourse.zoomLink && (
-              <div style={{ marginTop: "20px", padding: "15px", backgroundColor: "#e3f2fd", borderRadius: "8px", border: "1px solid #90caf9" }}>
+              <div style={{ marginTop: "20px", padding: "15px", backgroundColor: "#74b3df", borderRadius: "8px", border: "1px solid #90caf9" }}>
                 <h3 style={{ margin: "0 0 10px 0", color: "#0d47a1" }}>🎥 Live Class Available</h3>
                 <a 
                   href={selectedCourse.zoomLink} 
@@ -283,7 +283,7 @@ function App() {
         <h3>📚 Course Content</h3>
         {selectedCourse.lessons?.length ? (
           selectedCourse.lessons.map(lesson => (
-            <div key={lesson.id} style={{ background: "#f8f9fa", padding: "15px", marginBottom: "15px", borderRadius: "8px", borderLeft: "5px solid #007bff", boxShadow: "0 2px 4px rgba(0,0,0,0.05)" }}>
+            <div key={lesson.id} style={{ background: "#75f7f9", padding: "15px", marginBottom: "15px", borderRadius: "8px", borderLeft: "5px solid #007bff", boxShadow: "0 2px 4px rgba(0,0,0,0.05)" }}>
               <h4 style={{marginTop: 0}}>{lesson.title}</h4>
               <p style={{lineHeight: "1.6"}}>{lesson.content}</p>
             </div>
